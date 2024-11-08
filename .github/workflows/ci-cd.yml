@@ -51,9 +51,10 @@ jobs:
           APPLICATION_NAME: "zlo-login-microservice"
           ENVIRONMENT_NAME: "zlo-login-microservice-env-2"
           S3_BUCKET: "elasticbeanstalk-us-east-1-476114126279"
+          JAR_FILE: ${{ env.JAR_FILE }}
         run: |
           cd target
-          zip application.zip $JAR_FILE
+          zip -r application.zip "$(basename $JAR_FILE)"
           aws s3 cp application.zip s3://$S3_BUCKET/$APPLICATION_NAME/application.zip
           aws elasticbeanstalk create-application-version --application-name $APPLICATION_NAME --version-label $GITHUB_SHA --source-bundle S3Bucket=$S3_BUCKET,S3Key=$APPLICATION_NAME/application.zip
           aws elasticbeanstalk update-environment --environment-name $ENVIRONMENT_NAME --version-label $GITHUB_SHA
