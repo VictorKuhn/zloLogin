@@ -30,6 +30,15 @@ jobs:
       - name: Build with Maven
         run: mvn clean install -DskipTests
 
+      - name: List target directory
+        run: ls -l target
+
+      - name: Set JAR filename
+        id: jarname
+        run: |
+          JAR_FILE=$(ls target/*.jar | head -n 1)
+          echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -44,7 +53,7 @@ jobs:
           S3_BUCKET: "elasticbeanstalk-us-east-1-476114126279"
         run: |
           cd target
-          zip application.zip application.jar
+          zip application.zip $JAR_FILE
           aws s3 cp application.zip s3://$S3_BUCKET/$APPLICATION_NAME/application.zip
           aws elasticbeanstalk create-application-version --application-name $APPLICATION_NAME --version-label $GITHUB_SHA --source-bundle S3Bucket=$S3_BUCKET,S3Key=$APPLICATION_NAME/application.zip
           aws elasticbeanstalk update-environment --environment-name $ENVIRONMENT_NAME --version-label $GITHUB_SHA
