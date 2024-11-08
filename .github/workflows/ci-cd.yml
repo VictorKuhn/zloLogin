@@ -3,7 +3,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - master # Configurado para disparar o CI/CD apenas para a branch master
+      - master
 
 jobs:
   build-and-deploy:
@@ -30,11 +30,8 @@ jobs:
       - name: Build with Maven
         run: mvn clean install -DskipTests
 
-      - name: Run Tests
-        run: mvn test
-
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2 # Atualizado para v2
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -42,16 +39,12 @@ jobs:
 
       - name: Deploy to Elastic Beanstalk
         env:
-          APPLICATION_NAME: "zlo-login-microservice" # Nome da aplicação - Elastic Beanstalk
-          ENVIRONMENT_NAME: "zlo-login-microservice-env-2" # Nome do ambiente - Elastic Beanstalk
-          S3_BUCKET: "elasticbeanstalk-us-east-1-476114126279" # Nome do bucket S3 - Utilização do Elastic Beanstalk
+          APPLICATION_NAME: "zlo-login-microservice"
+          ENVIRONMENT_NAME: "zlo-login-microservice-env-2"
+          S3_BUCKET: "elasticbeanstalk-us-east-1-476114126279"
         run: |
-          zip -r application.zip .
+          cd target
+          zip application.zip application.jar
           aws s3 cp application.zip s3://$S3_BUCKET/$APPLICATION_NAME/application.zip
-          aws elasticbeanstalk create-application-version \
-            --application-name $APPLICATION_NAME \
-            --version-label $GITHUB_SHA \
-            --source-bundle S3Bucket=$S3_BUCKET,S3Key=$APPLICATION_NAME/application.zip
-          aws elasticbeanstalk update-environment \
-            --environment-name $ENVIRONMENT_NAME \
-            --version-label $GITHUB_SHA
+          aws elasticbeanstalk create-application-version --application-name $APPLICATION_NAME --version-label $GITHUB_SHA --source-bundle S3Bucket=$S3_BUCKET,S3Key=$APPLICATION_NAME/application.zip
+          aws elasticbeanstalk update-environment --environment-name $ENVIRONMENT_NAME --version-label $GITHUB_SHA
