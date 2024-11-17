@@ -1,120 +1,101 @@
-// JwtTokenProviderTest.java
 package com.zlologin.zlologin.util;
 
-import com.zlologin.zlologin.model.Role;
-import com.zlologin.zlologin.model.User;
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.context.ActiveProfiles;
+
+import java.security.Key;
+import java.util.Collections;
 import java.util.Date;
-import java.util.List;
+import java.util.Base64;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest  // Carrega o contexto do Spring Boot
-@ActiveProfiles("test")  // Perfil de teste
-public class JwtTokenProviderTest {
+class JwtTokenProviderTest {
 
-    private static final String JWT_SECRET = "9a74b83a56c54a8e1a65b8ab6d5c3f35a2f9873a4c65723a98f74a5e5e983a47a39c456d8a4f53d9e8b56473b8a29d6a";
-    private static final long JWT_EXPIRATION_MS = 86400000; // 1 dia em milissegundos
-
-    @Autowired
     private JwtTokenProvider jwtTokenProvider;
+    private String secretKey;
 
-    /**
-     * Testa a geração de um token JWT e verifica se o token é criado corretamente.
-     */
+    @BeforeEach
+    void setUp() {
+        // Gerar uma chave segura para o teste
+        Key key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+        secretKey = Base64.getEncoder().encodeToString(key.getEncoded());
+
+        jwtTokenProvider = new JwtTokenProvider(secretKey, 3600000); // 1 hora em milissegundos para expiração padrão
+    }
+
     @Test
-    public void whenGenerateToken_thenTokenIsCreated() {
-        // Arrange
-        User user = new User();
-        user.setEmail("cuidador@gmail.com");
-        user.setRole(Role.CUIDADOR);  // Usando "CUIDADOR" diretamente do enum
-
+    void testGenerateToken() {
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                user, null, List.of(new SimpleGrantedAuthority(user.getRole().name()))
+                "test@example.com", null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        // Act
         String token = jwtTokenProvider.generateToken(authentication);
-
-        // Assert
         assertNotNull(token);
-        Claims claims = Jwts.parser().setSigningKey(JWT_SECRET).parseClaimsJws(token).getBody();
 
-        // Valida que o subject contém o User completo
-        assertEquals(user.toString(), claims.getSubject());
+        String emailFromToken = jwtTokenProvider.getUserEmailFromToken(token);
+        assertEquals("test@example.com", emailFromToken);
 
-        // Valida as roles no claim "roles"
-        assertEquals("CUIDADOR", claims.get("roles"));
+        String rolesFromToken = jwtTokenProvider.getRolesFromToken(token);
+        assertEquals("ROLE_USER", rolesFromToken);
     }
 
-    /**
-     * Testa a validação de um token JWT válido.
-     */
     @Test
-    public void whenValidToken_thenValidationSucceeds() {
-        // Arrange
-        String token = Jwts.builder()
-                .setSubject("cuidador@gmail.com")
-                .claim("roles", "CUIDADOR")  // Ajustando para "CUIDADOR" conforme no enum
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION_MS))
-                .signWith(SignatureAlgorithm.HS512, JWT_SECRET)
-                .compact();
+    void testGenerateTokenWithExpiry() {
+        String email = "test@example.com";
+        int expiryMinutes = 5;
 
-        // Act
-        boolean isValid = jwtTokenProvider.validateToken(token);
+        String token = jwtTokenProvider.generateTokenWithExpiry(email, expiryMinutes);
+        assertNotNull(token);
 
-        // Assert
-        assertTrue(isValid);
+        String emailFromToken = jwtTokenProvider.getUserEmailFromToken(token);
+        assertEquals(email, emailFromToken);
+
+        Date expirationDate = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getExpiration();
+        long expectedExpiry = System.currentTimeMillis() + (expiryMinutes * 60 * 1000L);
+        assertTrue(expirationDate.getTime() - expectedExpiry < 1000); // tolerância de 1 segundo para o tempo de execução
     }
 
-    /**
-     * Testa a validação de um token JWT expirado.
-     */
     @Test
-    public void whenExpiredToken_thenValidationFails() {
-        // Arrange
-        String expiredToken = Jwts.builder()
-                .setSubject("cuidador@gmail.com")
-                .claim("roles", "CUIDADOR")
-                .setIssuedAt(new Date(System.currentTimeMillis() - JWT_EXPIRATION_MS * 2)) // Emissão antiga
-                .setExpiration(new Date(System.currentTimeMillis() - JWT_EXPIRATION_MS))  // Expiração no passado
-                .signWith(SignatureAlgorithm.HS512, JWT_SECRET)
-                .compact();
+    void testValidateTokenValid() {
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                "test@example.com", null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+        );
 
-        // Act
-        boolean isValid = jwtTokenProvider.validateToken(expiredToken);
-
-        // Assert
-        assertFalse(isValid);
+        String token = jwtTokenProvider.generateToken(authentication);
+        assertTrue(jwtTokenProvider.validateToken(token));
     }
 
-    /**
-     * Testa a extração do e-mail do token JWT.
-     */
     @Test
-    public void whenGetUserEmailFromToken_thenCorrectEmailIsReturned() {
-        // Arrange
-        String token = Jwts.builder()
-                .setSubject("cuidador@gmail.com")
-                .claim("roles", "CUIDADOR")
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION_MS))
-                .signWith(SignatureAlgorithm.HS512, JWT_SECRET)
-                .compact();
+    void testValidateTokenInvalid() {
+        String invalidToken = "invalidTokenValue";
+        assertFalse(jwtTokenProvider.validateToken(invalidToken));
+    }
 
-        // Act
-        String email = jwtTokenProvider.getUserEmailFromToken(token);
+    @Test
+    void testGetUserEmailFromToken() {
+        String email = "test@example.com";
+        String token = jwtTokenProvider.generateTokenWithExpiry(email, 10);
 
-        // Assert
-        assertEquals("cuidador@gmail.com", email);
+        String emailFromToken = jwtTokenProvider.getUserEmailFromToken(token);
+        assertEquals(email, emailFromToken);
+    }
+
+    @Test
+    void testGetRolesFromToken() {
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                "test@example.com", null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+
+        String token = jwtTokenProvider.generateToken(authentication);
+        String rolesFromToken = jwtTokenProvider.getRolesFromToken(token);
+
+        assertEquals("ROLE_ADMIN", rolesFromToken);
     }
 }

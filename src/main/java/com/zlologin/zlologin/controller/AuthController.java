@@ -1,7 +1,9 @@
 package com.zlologin.zlologin.controller;
 
+import com.zlologin.zlologin.dto.ForgotPasswordDTO;
 import com.zlologin.zlologin.dto.LoginDTO;
 import com.zlologin.zlologin.dto.RegisterDTO;
+import com.zlologin.zlologin.dto.ResetPasswordDTO;
 import com.zlologin.zlologin.service.UserService;
 import com.zlologin.zlologin.util.JwtTokenProvider;
 import org.springframework.http.HttpStatus;
@@ -11,11 +13,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -58,4 +56,26 @@ public class AuthController {
             }
         }
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordDTO forgotPasswordDTO) {
+        try {
+            userService.sendPasswordResetToken(forgotPasswordDTO.getEmail());
+            return ResponseEntity.ok("E-mail para redefinição de senha enviado com sucesso.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao enviar e-mail de redefinição de senha.");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordDTO resetPasswordDTO) {
+        try {
+            // Chama o serviço para redefinir a senha
+            userService.resetPassword(resetPasswordDTO.getToken(), resetPasswordDTO.getNewPassword());
+            return ResponseEntity.ok("Senha redefinida com sucesso.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token inválido ou expirado.");
+        }
+    }
+
 }

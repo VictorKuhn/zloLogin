@@ -20,20 +20,35 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
-    // Gera o token JWT
+    public JwtTokenProvider(@Value("${jwt.secret}") String jwtSecret, @Value("${jwt.expiration}") long jwtExpirationMs) {
+        this.jwtSecret = jwtSecret;
+        this.jwtExpirationMs = jwtExpirationMs;
+    }
+
+    // Gera o token JWT padrão para autenticação com expiração padrão
     public String generateToken(Authentication authentication) {
         String email = authentication.getName();
 
-        // Extrai as roles (autoridades) do usuário
         String roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
         return Jwts.builder()
                 .setSubject(email)
-                .claim("roles", roles)  // Adiciona as roles como uma claim no token
+                .claim("roles", roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .compact();
+    }
+
+    // Novo método para gerar um token JWT com expiração personalizada
+    public String generateTokenWithExpiry(String email, int expiryMinutes) {
+        long expiryInMillis = expiryMinutes * 60 * 1000L;
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiryInMillis))
                 .signWith(SignatureAlgorithm.HS512, jwtSecret)
                 .compact();
     }
@@ -57,6 +72,6 @@ public class JwtTokenProvider {
     // Extrai as roles do token
     public String getRolesFromToken(String token) {
         Claims claims = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody();
-        return claims.get("roles", String.class);  // Retorna as roles do token
+        return claims.get("roles", String.class);
     }
 }
