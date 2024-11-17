@@ -67,6 +67,35 @@ Envie a requisição com o Token JWT no Header como "Bearer <tokenJWT>", ou na a
 O endpoint público dessa aplicação pode estar ou não disponível dependendo da fase de desenvolvimento, visando redução de custos com nuvem, portanto, em caso de disponibilidade, você pode testar todos os endpoints citados anteriormente pelo seguinte URL:
 `http://zlo-login-microservice-env-2.eba-cm4nxyyj.us-east-1.elasticbeanstalk.com`/<endpointDesejado>
 
+4. Recuperação de senha sem estar logado (Envio de e-mail para recuperação através de link):
+
+{HOST}/auth/forgot-password
+
+Tipo da requisição: POST
+Envie a requisição com um JSON no body, com o seguinte corpo na requisição:
+
+```
+{
+  "email": "<emailDesejado>"
+}
+```
+
+Lembrando que nesse caso deve-se enviar na requisição um e-mail previamente cadastrado.
+
+5. Redefinir senha com base no token e nova senha desejada, nesse caso o token deve ser pego ou através da geração no Login, ou no token que é enviado no link do e-mail de recuperação.
+
+{HOST}/auth/reset-password
+
+Tipo da requisição: POST
+Envie a requisição com um JSON no body, com o seguinte corpo da requisição:
+
+```
+{
+  "token": "<tokenJwtValido>",
+  "newPassword": "<novaSenhaDesejada>"
+}
+```
+
 ## Agradecimentos
 
 Agradeço por dedicar seu tempo para ler sobre este projeto de microserviço de autenticação! Espero que ele seja útil e agregue valor ao seu trabalho ou aprendizado. Qualquer feedback é bem-vindo e ficarei feliz em conectar!
