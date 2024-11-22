@@ -7,11 +7,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -26,6 +30,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Habilita CORS
                 .csrf(csrf -> csrf.disable())  // Desabilita CSRF para APIs REST
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints de autenticação estão liberados para todos
@@ -56,5 +61,33 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public CorsFilter corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+
+        // Configuração temporária para permitir todas as origens
+        config.setAllowCredentials(false);
+        config.setAllowedOrigins(Arrays.asList("*")); // Permite todas as origens
+        config.setAllowedHeaders(Arrays.asList("*")); // Permite todos os cabeçalhos
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Métodos permitidos
+
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
+    }
+
+    private UrlBasedCorsConfigurationSource corsConfigurationSource() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+
+        // Configuração temporária para liberar qualquer origem
+        config.addAllowedOrigin("*");
+        config.addAllowedMethod("*");
+        config.addAllowedHeader("*");
+
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }
