@@ -42,6 +42,9 @@ public class SecurityConfig {
                         // Apenas usuários com a role "RESPONSAVEL" podem acessar os endpoints /api/responsavel/**
                         .requestMatchers("/api/responsavel/**").hasRole("RESPONSAVEL")
 
+                        // Apenas ADMIN pode apagar registros
+                        .requestMatchers("/temp-users").hasRole("ADMIN")
+
                         // ADMIN pode acessar todos os endpoints
                         .requestMatchers("/admin/**", "/api/**").hasRole("ADMIN")
 
