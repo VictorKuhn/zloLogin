@@ -21,7 +21,7 @@ public class TempUserService {
 
     public String createTempUser(String email, String phoneNumber) {
         // Gera o token JWT para o usuário temporário
-        String token = jwtTokenProvider.generateTempUserToken(email, 15);
+        String token = jwtTokenProvider.generateTempUserToken(email, 15); // Expiração de 1 minuto
 
         // Verifica se já existe um registro com o mesmo email
         Optional<TempUser> existingTempUser = tempUserRepository.findByEmail(email);
@@ -34,15 +34,19 @@ public class TempUserService {
                 tempUser.setJwtToken(token);
                 tempUser.setCreatedAt(LocalDateTime.now());
                 tempUser.setExpiresAt(LocalDateTime.now().plusMinutes(15));
-                tempUser.setPhoneNumber(phoneNumber); // Atualiza o telefone caso tenha mudado
+                tempUser.setPhoneNumber(phoneNumber);
                 tempUserRepository.save(tempUser);
                 return token;
+            } else {
+                // "Arquiva" o registro antigo (atualiza algum identificador para diferenciar)
+                tempUser.setEmail(email + "_expired_" + System.currentTimeMillis());
+                tempUserRepository.save(tempUser);
             }
         }
 
-        // Cria um novo registro se o token estiver expirado ou não houver registro existente
+        // Cria um novo registro com as mesmas credenciais
         TempUser newTempUser = new TempUser();
-        newTempUser.setEmail(email);
+        newTempUser.setEmail(email); // Mesmo email
         newTempUser.setPhoneNumber(phoneNumber);
         newTempUser.setJwtToken(token);
         newTempUser.setCreatedAt(LocalDateTime.now());
