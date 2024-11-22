@@ -42,7 +42,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Novo método para gerar um token JWT com expiração personalizada
+    // Método existente para gerar um token JWT com expiração personalizada (intacto)
     public String generateTokenWithExpiry(String email, int expiryMinutes) {
         long expiryInMillis = expiryMinutes * 60 * 1000L;
         return Jwts.builder()
@@ -50,6 +50,18 @@ public class JwtTokenProvider {
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiryInMillis))
                 .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .compact();
+    }
+
+    // Novo método para gerar um token JWT a um usuário temporário
+    public String generateTempUserToken(String email, int expiryMinutes) {
+        long expiryInMillis = expiryMinutes * 60 * 1000L;
+        return Jwts.builder()
+                .setSubject(email) // Email do usuário
+                .claim("roles", "ROLE_TEMPUSER") // Role fixa para usuários temporários
+                .setIssuedAt(new Date()) // Data de emissão
+                .setExpiration(new Date(System.currentTimeMillis() + expiryInMillis)) // Data de expiração
+                .signWith(SignatureAlgorithm.HS512, jwtSecret) // Assina o token
                 .compact();
     }
 

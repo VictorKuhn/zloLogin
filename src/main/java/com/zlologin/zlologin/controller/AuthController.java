@@ -4,6 +4,8 @@ import com.zlologin.zlologin.dto.ForgotPasswordDTO;
 import com.zlologin.zlologin.dto.LoginDTO;
 import com.zlologin.zlologin.dto.RegisterDTO;
 import com.zlologin.zlologin.dto.ResetPasswordDTO;
+import com.zlologin.zlologin.dto.TempUserDTO;
+import com.zlologin.zlologin.service.TempUserService;
 import com.zlologin.zlologin.service.UserService;
 import com.zlologin.zlologin.util.JwtTokenProvider;
 import org.springframework.http.HttpStatus;
@@ -20,11 +22,16 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserService userService;
+    private final TempUserService tempUserService;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
 
-    public AuthController(UserService userService, AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider) {
+    public AuthController(UserService userService,
+                          TempUserService tempUserService,
+                          AuthenticationManager authenticationManager,
+                          JwtTokenProvider jwtTokenProvider) {
         this.userService = userService;
+        this.tempUserService = tempUserService;
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
     }
@@ -38,17 +45,14 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody LoginDTO loginDTO) {
         try {
-            // Autentica o usuário
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword())
             );
 
-            // Gera o token JWT após a autenticação bem-sucedida
             String token = jwtTokenProvider.generateToken(authentication);
-            return ResponseEntity.ok(token);  // Retorna o token JWT
+            return ResponseEntity.ok(token);
 
         } catch (AuthenticationException e) {
-            // Captura erros de autenticação (como e-mail não existente ou senha incorreta)
             if (e instanceof BadCredentialsException) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciais inválidas!");
             } else {
@@ -70,7 +74,6 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordDTO resetPasswordDTO) {
         try {
-            // Chama o serviço para redefinir a senha
             userService.resetPassword(resetPasswordDTO.getToken(), resetPasswordDTO.getNewPassword());
             return ResponseEntity.ok("Senha redefinida com sucesso.");
         } catch (Exception e) {
@@ -78,4 +81,16 @@ public class AuthController {
         }
     }
 
+    // Novo endpoint para criação de usuário temporário
+    @PostMapping("/temp-user")
+    public ResponseEntity<?> createTempUser(@RequestBody TempUserDTO tempUserDTO) {
+        try {
+            String token = tempUserService.createTempUser(tempUserDTO.getEmail(), tempUserDTO.getPhoneNumber());
+            return ResponseEntity.ok(token); // Retorna o token JWT gerado
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao criar usuário temporário.");
+        }
+    }
 }

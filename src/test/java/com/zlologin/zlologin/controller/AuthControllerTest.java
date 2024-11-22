@@ -1,9 +1,7 @@
 package com.zlologin.zlologin.controller;
 
-import com.zlologin.zlologin.dto.ForgotPasswordDTO;
-import com.zlologin.zlologin.dto.LoginDTO;
-import com.zlologin.zlologin.dto.RegisterDTO;
-import com.zlologin.zlologin.dto.ResetPasswordDTO;
+import com.zlologin.zlologin.dto.*;
+import com.zlologin.zlologin.service.TempUserService;
 import com.zlologin.zlologin.service.UserService;
 import com.zlologin.zlologin.util.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +28,9 @@ class AuthControllerTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private TempUserService tempUserService;
 
     @Mock
     private AuthenticationManager authenticationManager;
@@ -149,7 +150,6 @@ class AuthControllerTest {
         loginDTO.setEmail("test@example.com");
         loginDTO.setPassword("password123");
 
-        // Simula uma exceção AuthenticationException genérica (não BadCredentialsException)
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new AuthenticationException("Erro de autenticação!") {});
 
@@ -157,5 +157,53 @@ class AuthControllerTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertEquals("Erro de autenticação!", response.getBody());
+    }
+
+    @Test
+    void testCreateTempUserSuccess() {
+        TempUserDTO tempUserDTO = new TempUserDTO();
+        tempUserDTO.setEmail("tempuser@example.com");
+        tempUserDTO.setPhoneNumber("555199999999");
+
+        when(tempUserService.createTempUser(tempUserDTO.getEmail(), tempUserDTO.getPhoneNumber()))
+                .thenReturn("mockedTempToken");
+
+        ResponseEntity<?> response = authController.createTempUser(tempUserDTO);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("mockedTempToken", response.getBody());
+        verify(tempUserService, times(1)).createTempUser(tempUserDTO.getEmail(), tempUserDTO.getPhoneNumber());
+    }
+
+    @Test
+    void testCreateTempUserThrowsBadRequest() {
+        TempUserDTO tempUserDTO = new TempUserDTO();
+        tempUserDTO.setEmail("tempuser@example.com");
+        tempUserDTO.setPhoneNumber("555199999999");
+
+        when(tempUserService.createTempUser(tempUserDTO.getEmail(), tempUserDTO.getPhoneNumber()))
+                .thenThrow(new IllegalArgumentException("Usuário temporário já existe!"));
+
+        ResponseEntity<?> response = authController.createTempUser(tempUserDTO);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Usuário temporário já existe!", response.getBody());
+        verify(tempUserService, times(1)).createTempUser(tempUserDTO.getEmail(), tempUserDTO.getPhoneNumber());
+    }
+
+    @Test
+    void testCreateTempUserThrowsInternalError() {
+        TempUserDTO tempUserDTO = new TempUserDTO();
+        tempUserDTO.setEmail("tempuser@example.com");
+        tempUserDTO.setPhoneNumber("555199999999");
+
+        when(tempUserService.createTempUser(tempUserDTO.getEmail(), tempUserDTO.getPhoneNumber()))
+                .thenThrow(new RuntimeException("Erro inesperado!"));
+
+        ResponseEntity<?> response = authController.createTempUser(tempUserDTO);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals("Erro ao criar usuário temporário.", response.getBody());
+        verify(tempUserService, times(1)).createTempUser(tempUserDTO.getEmail(), tempUserDTO.getPhoneNumber());
     }
 }
