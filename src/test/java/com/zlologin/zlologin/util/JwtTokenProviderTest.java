@@ -10,9 +10,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.security.Key;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,6 +63,24 @@ class JwtTokenProviderTest {
     }
 
     @Test
+    void testGenerateTempUserToken() {
+        String email = "tempuser@example.com";
+
+        String token = jwtTokenProvider.generateTempUserToken(email, 15); // Expiração de 15 minutos
+        assertNotNull(token);
+
+        String emailFromToken = jwtTokenProvider.getUserEmailFromToken(token);
+        assertEquals(email, emailFromToken);
+
+        String rolesFromToken = jwtTokenProvider.getRolesFromToken(token);
+        assertEquals("ROLE_TEMPUSER", rolesFromToken);
+
+        Date expirationDate = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getExpiration();
+        long expectedExpiry = System.currentTimeMillis() + (15 * 60 * 1000L);
+        assertTrue(expirationDate.getTime() - expectedExpiry < 1000); // tolerância de 1 segundo para o tempo de execução
+    }
+
+    @Test
     void testValidateTokenValid() {
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 "test@example.com", null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
@@ -97,5 +115,16 @@ class JwtTokenProviderTest {
         String rolesFromToken = jwtTokenProvider.getRolesFromToken(token);
 
         assertEquals("ROLE_ADMIN", rolesFromToken);
+    }
+
+    @Test
+    void testExpiredTokenValidation() throws InterruptedException {
+        String email = "test@example.com";
+        String token = jwtTokenProvider.generateTokenWithExpiry(email, 1); // Expiração de 1 minuto
+
+        // Espera 70 segundos para garantir que o token expire
+        Thread.sleep(70 * 1000);
+
+        assertFalse(jwtTokenProvider.validateToken(token));
     }
 }
