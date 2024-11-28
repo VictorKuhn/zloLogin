@@ -20,6 +20,8 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
+    private static final String CLAIM_ROLES = "roles";
+
     public JwtTokenProvider(@Value("${jwt.secret}") String jwtSecret, @Value("${jwt.expiration}") long jwtExpirationMs) {
         this.jwtSecret = jwtSecret;
         this.jwtExpirationMs = jwtExpirationMs;
@@ -35,7 +37,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .setSubject(email)
-                .claim("roles", roles)
+                .claim(CLAIM_ROLES, roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(SignatureAlgorithm.HS512, jwtSecret)
@@ -58,7 +60,7 @@ public class JwtTokenProvider {
         long expiryInMillis = expiryMinutes * 60 * 1000L;
         return Jwts.builder()
                 .setSubject(email) // Email do usuário
-                .claim("roles", "ROLE_TEMPUSER") // Role fixa para usuários temporários
+                .claim(CLAIM_ROLES, "ROLE_TEMPUSER") // Role fixa para usuários temporários
                 .setIssuedAt(new Date()) // Data de emissão
                 .setExpiration(new Date(System.currentTimeMillis() + expiryInMillis)) // Data de expiração
                 .signWith(SignatureAlgorithm.HS512, jwtSecret) // Assina o token
@@ -84,6 +86,6 @@ public class JwtTokenProvider {
     // Extrai as roles do token
     public String getRolesFromToken(String token) {
         Claims claims = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody();
-        return claims.get("roles", String.class);
+        return claims.get(CLAIM_ROLES, String.class);
     }
 }
