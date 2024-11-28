@@ -11,6 +11,6 @@ public class ResponsavelController {
 
     @GetMapping("/dashboard")
     public ResponseEntity<String> responsavelDashboard() {
-        return ResponseEntity.ok("Seja bem-vindo ao dashboard do responsável!");
+        return ResponseEntity.ok("Seja bem-vindo ao dashboard do responsavel!");
     }
 }
