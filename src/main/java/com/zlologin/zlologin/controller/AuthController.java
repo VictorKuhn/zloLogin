@@ -37,13 +37,13 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody RegisterDTO registerDTO) {
+    public ResponseEntity<String> registerUser(@RequestBody RegisterDTO registerDTO) {
         userService.registerUser(registerDTO);
         return ResponseEntity.ok("Usuário registrado com sucesso!");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody LoginDTO loginDTO) {
+    public ResponseEntity<String> loginUser(@RequestBody LoginDTO loginDTO) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword())
@@ -83,7 +83,7 @@ public class AuthController {
 
     // Novo endpoint para criação de usuário temporário
     @PostMapping("/temp-user")
-    public ResponseEntity<?> createTempUser(@RequestBody TempUserDTO tempUserDTO) {
+    public ResponseEntity<String> createTempUser(@RequestBody TempUserDTO tempUserDTO) {
         try {
             String token = tempUserService.createTempUser(tempUserDTO.getEmail(), tempUserDTO.getPhoneNumber());
             return ResponseEntity.ok(token); // Retorna o token JWT gerado
