@@ -1,103 +1,186 @@
+
 # ZLO Login - Microserviço de Autenticação
 
-### O que é o ZLO Login?
-O ZLO Login é uma solução em formato de microserviço pensada em servir toda a aplicação ZLO, uma plataforma de identificação e ajuda a pessoas com doenças as quais os tornam dependentes. Por fato de ser uma aplicação com diversos módulos, a autenticação foi pensada de forma independente, para que não tenham possibilidades de cair juntamente aos demais módulos da aplicação e assim tornando-a eficiente e segura.
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=VictorKuhn_zloLogin&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=VictorKuhn_zloLogin)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=VictorKuhn_zloLogin&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=VictorKuhn_zloLogin)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=VictorKuhn_zloLogin&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=VictorKuhn_zloLogin)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=VictorKuhn_zloLogin&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=VictorKuhn_zloLogin)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=VictorKuhn_zloLogin&metric=bugs)](https://sonarcloud.io/summary/new_code?id=VictorKuhn_zloLogin)
 
-### Preparação de ambiente para a aplicação:
-1. Confira alguns dos requisitos necessários para poder rodar a aplicação em sua máquina local:
-    - Possuir em seu ambiente de desenvolvimento JAVA 17 como predefinida, assim como também o Maven
-    - Banco de dados PostgreSQL instalado e inicializado com um banco de dados "zloLogin" criado
-    - Postman ou outro software para enviar requisições ao serviço
-2. Importe o projeto em sua IDE e confira detalhadamente os dados de conexão com o banco de dados local (Arquivo application.properties no projeto)
-3. Inicie o projeto em sua IDE de preferência e confira no console os LOGs acerca da inicialização do serviço Spring Boot
-4. Quando iniciado corretamente o serviço, envie as requisições desejadas especificadas a seguir.
+## O que é o ZLO Login?
+O ZLO Login é um microserviço de autenticação robusto, escalável e independente, desenvolvido para atender a plataforma ZLO. Ele foi projetado para garantir alta disponibilidade, segurança avançada e facilidade de integração com os módulos da aplicação.
 
-### Endpoints disponíveis
+A independência do ZLO Login como microserviço permite que ele continue operando mesmo se outros módulos da plataforma enfrentarem problemas, garantindo autenticações seguras e controle de acesso contínuo. Este projeto também adota as melhores práticas de segurança, utilizando tokens JWT, integração segura com o AWS Elastic Beanstalk e PostgreSQL, além de auditorias detalhadas para monitoramento de acessos.
 
-1. Registro de um novo usuário:
-{HOST}/auth/register
+---
 
-Tipo da requisição: POST
-Corpo da requisição (JSON):
+## Funcionalidades Principais
+- **Autenticação Segura com JWT**: Todos os usuários recebem tokens JWT que incluem informações como expiração, ROLE e identificadores únicos.
+- **Gestão de Usuários Temporários**: Permite acessos rápidos com validade limitada a 15 minutos, renováveis automaticamente.
+- **Recuperação de Senhas**: Suporte a redefinição de senhas com tokens de segurança via e-mail.
+- **Controle Granular de Permissões**: Acesso baseado em papéis (RESPONSÁVEL, CUIDADOR, ADMIN) com verificação nos endpoints.
+- **Auditoria de Acessos**: Registros detalhados de todos os acessos e renovações de tokens, garantindo rastreabilidade e conformidade.
+- **Escalabilidade na Nuvem**: Integração com a AWS, garantindo que o sistema suporte crescimento sem comprometimento de desempenho.
+
+---
+
+## Estrutura do Projeto
+```plaintext
+src/
+├── main/
+│   ├── java/
+│   │   └── com.zlologin.zlologin/
+│   │       ├── config/        # Configurações de segurança e sistema
+│   │       ├── controller/    # Endpoints REST expostos
+│   │       ├── dto/           # Objetos de transferência de dados
+│   │       ├── exception/     # Manipulação de erros e exceções
+│   │       ├── model/         # Entidades do banco de dados
+│   │       ├── repository/    # Operações com o banco de dados
+│   │       ├── service/       # Regras de negócio
+│   │       └── util/          # Métodos auxiliares
+│   └── resources/
+│       ├── static/            # Arquivos estáticos
+│       ├── templates/         # Templates de e-mail
+│       └── application.properties  # Configurações do Spring
+└── test/
+    └── java/
+```
+
+---
+
+## Endpoints Disponíveis
+Os endpoints foram projetados para atender a diversas operações, mantendo segurança e flexibilidade.
+
+### 1. Registro de um Novo Usuário
+**Endpoint**: `POST {HOST}/auth/register`  
+**Descrição**: Cria um novo usuário com base nas informações fornecidas.
+
+**Exemplo de Requisição**:
 ```json
 {
-  "email": "<emailDesejado>",
-  "password": "<senhaDesejada>",
-  "role": "RESPONSÁVEL | CUIDADOR | ADMIN"
+  "email": "usuario@example.com",
+  "password": "senhaSegura123",
+  "role": "RESPONSÁVEL"
 }
 ```
-- Retorno esperado: STATUS 200 OK | Usuário criado com sucesso!
-- Exceções:
-    - Tentativa de criação de usuário duplicado
-    - Corpo da requisição inválido / formato não suportado
- 
-2. Login de usuário:
-{HOST}/auth/login
 
-Tipo da requisição: POST
-Corpo da requisição (JSON):
+**Respostas**:
+- **200 OK**: Usuário criado com sucesso.
+- **Erros**:
+  - **409 Conflict**: Usuário já existe.
+  - **400 Bad Request**: Dados inválidos.
 
-```
+---
+
+### 2. Login de Usuário
+**Endpoint**: `POST {HOST}/auth/login`  
+**Descrição**: Autentica o usuário e retorna um token JWT.
+
+**Exemplo de Requisição**:
+```json
 {
-  "email": "<emailCorreto>",
-  "password": "<senhaCorreta>"
+  "email": "usuario@example.com",
+  "password": "senhaSegura123"
 }
 ```
 
-- Retorno esperado: STATUS 200 OK | Retorno do token JWT referente ao Login!
-- Exceções:
-    - Credenciais inválidas
-    - 403 Forbidden caso a sessão (Token JWT) tenha expirado
-    - Corpo da requisição inválido / formato não suportado
+**Respostas**:
+- **200 OK**: Token JWT retornado com sucesso.
+- **Erros**:
+  - **403 Forbidden**: Credenciais inválidas.
+  - **400 Bad Request**: Formato da requisição inválido.
 
-3. Acessar endpoint de acordo com o nível de usuário/role (Apenas para fins de teste de permissão da ROLE em específico):
-Nessa parte temos disponíveis três endpoints, um para ADMIN, outro para CUIDADOR e outro para RESPONSÁVEL, substitua de acordo com o nível de usuário que você optou por cadastrar.
+---
 
-{HOST}api/<nivelAcesso>/dashboard
+### 3. Acessar Dashboard por Role
+**Endpoint**: `GET {HOST}/api/{role}/dashboard`  
+**Descrição**: Retorna uma página específica com base na ROLE do usuário.
 
-Tipo da requisição: GET
-Envie a requisição com o Token JWT no Header como "Bearer <tokenJWT>", ou na aba "Authorization" com o formato Bearer Token, e o token no campo designado.
+**Autorização**: Token JWT no cabeçalho da requisição.
 
-- Retorno esperado: STATUS 200 OK | Bem-vindo ao dashboard <nivelAcesso>!
-- Exceções:
-    - 403 Forbidden caso você tente entrar em algum dashboard que não seja o do seu nível de usuário
-    - 403 Forbidden caso o Token JWT esteja incorreto
- 
-### Acesso ao endpoint público:
-O endpoint público dessa aplicação pode estar ou não disponível dependendo da fase de desenvolvimento, visando redução de custos com nuvem, portanto, em caso de disponibilidade, você pode testar todos os endpoints citados anteriormente pelo seguinte URL:
-`http://zlo-login-microservice-env-2.eba-cm4nxyyj.us-east-1.elasticbeanstalk.com`/<endpointDesejado>
+**Respostas**:
+- **200 OK**: Acesso permitido.
+- **403 Forbidden**: Acesso negado.
 
-4. Recuperação de senha sem estar logado (Envio de e-mail para recuperação através de link):
+---
 
-{HOST}/auth/forgot-password
+### 4. Recuperação de Senha
+**Endpoint**: `POST {HOST}/auth/forgot-password`  
+**Descrição**: Envia um e-mail com link para redefinição de senha.
 
-Tipo da requisição: POST
-Envie a requisição com um JSON no body, com o seguinte corpo na requisição:
-
-```
+**Exemplo de Requisição**:
+```json
 {
-  "email": "<emailDesejado>"
+  "email": "usuario@example.com"
 }
 ```
 
-Lembrando que nesse caso deve-se enviar na requisição um e-mail previamente cadastrado.
+**Respostas**:
+- **200 OK**: E-mail enviado com sucesso.
+- **Erros**:
+  - **404 Not Found**: E-mail não encontrado.
 
-5. Redefinir senha com base no token e nova senha desejada, nesse caso o token deve ser pego ou através da geração no Login, ou no token que é enviado no link do e-mail de recuperação.
+---
 
-{HOST}/auth/reset-password
+### 5. Redefinição de Senha
+**Endpoint**: `POST {HOST}/auth/reset-password`  
+**Descrição**: Atualiza a senha com base no token JWT.
 
-Tipo da requisição: POST
-Envie a requisição com um JSON no body, com o seguinte corpo da requisição:
-
-```
+**Exemplo de Requisição**:
+```json
 {
-  "token": "<tokenJwtValido>",
-  "newPassword": "<novaSenhaDesejada>"
+  "token": "jwtTokenValido",
+  "newPassword": "novaSenha123"
 }
 ```
 
-## Agradecimentos
+**Respostas**:
+- **200 OK**: Senha alterada com sucesso.
+- **403 Forbidden**: Token JWT inválido ou expirado.
 
-Agradeço por dedicar seu tempo para ler sobre este projeto de microserviço de autenticação! Espero que ele seja útil e agregue valor ao seu trabalho ou aprendizado. Qualquer feedback é bem-vindo e ficarei feliz em conectar!
+---
 
-**Desenvolvedor:** [Victor Hugo Bosse Kühn](https://www.linkedin.com/in/victorbkuhn/)
+### 6. Criar Usuário Temporário
+**Endpoint**: `POST {HOST}/auth/temp-user`  
+**Descrição**: Gera um token JWT temporário com validade de 15 minutos.
+
+**Exemplo de Requisição**:
+```json
+{
+  "email": "tempuser@example.com",
+  "phoneNumber": "5547999999999"
+}
+```
+
+**Respostas**:
+- **200 OK**: Token gerado com sucesso.
+- **400 Bad Request**: Dados inválidos.
+
+---
+
+## Escalabilidade e Segurança
+O ZLO Login foi projetado com base em princípios de escalabilidade e segurança:  
+- **Hospedagem AWS**: Elastic Beanstalk para fácil implantação e RDS PostgreSQL para persistência robusta.  
+- **Segurança**: Uso de grupos de segurança AWS, roles específicas e criptografia de senhas (BCrypt).  
+- **Auditoria**: Registro de todas as ações de usuários temporários para rastreabilidade.
+
+---
+
+## Tecnologias Utilizadas
+- **Java 17** com **Spring Boot**: Framework moderno para desenvolvimento robusto.  
+- **PostgreSQL**: Banco de dados relacional de alta performance.  
+- **AWS Elastic Beanstalk**: Gerenciamento de infraestrutura automatizado.
+
+---
+
+## Contribuições
+Contribuições são bem-vindas! Para contribuir, abra uma *issue* ou envie um *pull request*.
+
+---
+
+## Aplicação disponível para acesso em:
+http://zlo-login-microservice-env-2.eba-cm4nxyyj.us-east-1.elasticbeanstalk.com/{endpointDesejado}
+
+## Desenvolvedores
+- **Victor Hugo Bosse Kühn**
+- [Perfil no LinkedIn](https://www.linkedin.com/in/victorbkuhn/)
